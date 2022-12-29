@@ -1,7 +1,9 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.DataProtection.XmlEncryption;
 using Microsoft.AspNetCore.Mvc;
 using MK.CityInfo.API.Models;
 using MK.CityInfo.API.Services;
+using System.Text.Json;
 
 namespace MK.CityInfo.API.Controllers
 {
@@ -12,6 +14,7 @@ namespace MK.CityInfo.API.Controllers
     {        
         private readonly ICityInfoRepository _repository;
         private readonly IMapper _mapper;
+        const int maxCitiesPageSize = 20;
 
         public CitiesController(ICityInfoRepository repository,
             IMapper mapper)
@@ -20,27 +23,29 @@ namespace MK.CityInfo.API.Controllers
             _mapper = mapper;
         }
 
+        /*
+         * If names are different in your query string, you can pass like this...
+         * [FromQuery(Name ="filteronname")] string? name*/
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<CityWithoutPointsOfInterestDto>>> GetCities()
+        public async Task<ActionResult<IEnumerable<CityWithoutPointsOfInterestDto>>> GetCities(
+             string? name, string? searchQuery, int pageNumber = 1, int pageSize=10)
         {
-            var cityEntities = await _repository.GetCitiesAsync();
-            
-            var results = new List<CityWithoutPointsOfInterestDto>();
+            if(pageSize > maxCitiesPageSize)
+            {
+                pageSize = maxCitiesPageSize;
+            }
+
+            var (cityEntities, paginationMetadata) = await _repository
+                .GetCitiesAsync(name,
+                                searchQuery,
+                                pageNumber,
+                                pageSize);
+
+            Response.Headers.Add("X-Pagination",
+                                 JsonSerializer.Serialize(paginationMetadata));
+
             return Ok(_mapper.Map<IEnumerable<CityWithoutPointsOfInterestDto>>(cityEntities));
-            
-            //without automapper
-            //foreach (var cityEntity in cityEntities)
-            //{
-            //    results.Add(new CityWithoutPointsOfInterestDto
-            //    {
-            //        Id = cityEntity.Id,
-            //        Description = cityEntity.Description,
-            //        Name = cityEntity.Name
-            //    });
-            //}
-           
-            //return Ok(results);
-            //return Ok(_citiesDataStore.Cities);
+                        
         }
         
 

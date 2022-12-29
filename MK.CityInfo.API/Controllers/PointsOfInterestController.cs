@@ -137,13 +137,13 @@ namespace MK.CityInfo.API.Controllers
             }
 
             var pointOfInterestEntity = await _repository.GetPointOfInterestForCityAsync(cityId, pointOfInterestId);
-            if(pointOfInterestEntity == null)
+            if (pointOfInterestEntity == null)
             {
                 return NotFound();
             }
 
             var pointOfInterestToPatch = _mapper.Map<PointOfInterestForUpdateDto>(pointOfInterestEntity);
-            
+
             //Check what model state do !!!
             patchDocument.ApplyTo(pointOfInterestToPatch, ModelState);
 
@@ -157,7 +157,7 @@ namespace MK.CityInfo.API.Controllers
                 return BadRequest(ModelState);
             }
 
-            _mapper.Map(pointOfInterestToPatch,pointOfInterestEntity);
+            _mapper.Map(pointOfInterestToPatch, pointOfInterestEntity);
 
             await _repository.SaveChangesAsync();
 
@@ -181,11 +181,10 @@ namespace MK.CityInfo.API.Controllers
 
             _repository.DeletePointOfInterest(pointOfInterestEntity);
 
-            //You need to saveChanges to apply deleting... without this returns 204 NoContent but selected pointOfInterest still exists in db
+            //You need to SaveChangesAsync() to apply deleting... without this returns 204 NoContent but selected pointOfInterest still exists in db
             await _repository.SaveChangesAsync();
-            
-            _mailService.Send("Point of interest deleted.", $"Point of interest {pointOfInterestEntity.Name} with id {pointOfInterestEntity.Id} was deleted");
 
+            _mailService.Send("Point of interest deleted.", $"Point of interest {pointOfInterestEntity.Name} with id {pointOfInterestEntity.Id} was deleted");
 
             return NoContent();
         }

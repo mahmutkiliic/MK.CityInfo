@@ -20,6 +20,53 @@ namespace MK.CityInfo.API.Services
             return await _context.Cities.OrderBy(c => c.Name).ToListAsync();
         }
 
+        public async Task<(IEnumerable<City>,PaginationMetadata)> GetCitiesAsync(
+            string? name, string? searchQuery, int pageNumber, int pageSize)
+        {
+            //if (string.IsNullOrEmpty(name) && string.IsNullOrWhiteSpace(searchQuery))
+            //{
+            //    return await GetCitiesAsync();
+            //}
+
+            //collection to start from
+            var collection = _context.Cities as IQueryable<City>;
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                name = name.Trim();
+                collection = collection.Where(c => c.Name == name);
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                searchQuery = searchQuery.Trim();
+                collection = collection.Where
+                    (a => a.Name.Contains(searchQuery) ||
+                    (a.Description != null && a.Description.Contains(searchQuery)));
+            }
+
+            
+            
+
+            var totalItemCount = await collection.CountAsync();
+
+            var paginationMetadata = new PaginationMetadata(totalItemCount, pageSize, pageNumber);
+
+            //ToListAsync() methods sends the query at the and (deferred execution)
+            var collectionToReturn =  await collection.OrderBy(c => c.Name)
+                .Skip(pageSize * (pageNumber - 1))
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (collectionToReturn, paginationMetadata);
+
+            //this helps only filtering.
+            //name = name.Trim();
+            //return await _context.Cities
+            //    .Where(c=>c.Name==name)
+            //    .OrderBy(c=>c.Name)
+            //    .ToListAsync();
+        }
+
         //Get a city with "cityId" and its pointOfInterests according to "includePointsOfInterest" true or not
         public async Task<City?> GetCityAsync(int cityId, bool includePointsOfInterest)
         {
@@ -34,7 +81,7 @@ namespace MK.CityInfo.API.Services
         //Get All "pointsOfInterest" for a city with "cityId"
         public async Task<IEnumerable<PointOfInterest>> GetPointsOfInterestForCityAsync(int cityId)
         {
-            return await _context.PointOfInterest.Where(c=>c.CityId==cityId).ToListAsync();
+            return await _context.PointOfInterest.Where(c => c.CityId == cityId).ToListAsync();
         }
 
         //Get a specific pointOfInterest with its "pointsOfInterestId" and that city's "cityId" 
@@ -56,7 +103,7 @@ namespace MK.CityInfo.API.Services
             {
                 city.PointsOfInterest.Add(pointOfInterest);
             }
-            
+
         }
         public void DeletePointOfInterest(PointOfInterest pointOfInterest)
         {
